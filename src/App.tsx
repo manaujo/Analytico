@@ -12,6 +12,10 @@ import { Login } from './pages/Login'
 import { Cadastro } from './pages/Cadastro'
 import { Dashboard } from './pages/Dashboard'
 import { NovaEmpresa } from './pages/NovaEmpresa'
+import { Vendas } from './pages/Vendas'
+import { Metas } from './pages/Metas'
+import { ImportarDados } from './pages/ImportarDados'
+import { Configuracoes } from './pages/Configuracoes'
 
 function App() {
   return (
@@ -42,25 +46,10 @@ function App() {
                 </ProtectedRoute>
               } />
 
-              {/* Placeholder routes for other pages */}
-              <Route path="/produtos" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Produtos</h2>
-                      <p className="text-gray-600">Página em desenvolvimento</p>
-                    </div>
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-
               <Route path="/vendas" element={
                 <ProtectedRoute>
                   <AppLayout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Vendas</h2>
-                      <p className="text-gray-600">Página em desenvolvimento</p>
-                    </div>
+                    <Vendas />
                   </AppLayout>
                 </ProtectedRoute>
               } />
@@ -68,10 +57,7 @@ function App() {
               <Route path="/metas" element={
                 <ProtectedRoute>
                   <AppLayout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Metas</h2>
-                      <p className="text-gray-600">Página em desenvolvimento</p>
-                    </div>
+                    <Metas />
                   </AppLayout>
                 </ProtectedRoute>
               } />
@@ -79,8 +65,25 @@ function App() {
               <Route path="/upload" element={
                 <ProtectedRoute>
                   <AppLayout>
+                    <ImportarDados />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/configuracoes" element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <Configuracoes />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+
+              {/* Placeholder routes for other pages */}
+              <Route path="/produtos" element={
+                <ProtectedRoute>
+                  <AppLayout>
                     <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Importar Dados</h2>
+                      <h2 className="text-2xl font-bold text-gray-900">Produtos</h2>
                       <p className="text-gray-600">Página em desenvolvimento</p>
                     </div>
                   </AppLayout>
@@ -103,17 +106,6 @@ function App() {
                   <AppLayout>
                     <div className="text-center py-12">
                       <h2 className="text-2xl font-bold text-gray-900">Alertas</h2>
-                      <p className="text-gray-600">Página em desenvolvimento</p>
-                    </div>
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-
-              <Route path="/configuracoes" element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Configurações</h2>
                       <p className="text-gray-600">Página em desenvolvimento</p>
                     </div>
                   </AppLayout>
