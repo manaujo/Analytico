@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useEmpresa } from '../hooks/useEmpresa'
 import { supabase } from '../lib/supabase'
@@ -64,13 +64,13 @@ export function Dashboard() {
       // Carregar produtos mais lucrativos (baseado na margem)
       const { data: produtos } = await supabase
         .from('produtos')
-        .select('*, vendas(quantidade, total)')
+        .select('*, vendas(*)')
         .eq('empresa_id', empresaAtual.id)
 
       const produtosComLucro = produtos?.map(produto => ({
         ...produto,
         margem: produto.preco_venda - produto.preco_custo,
-        totalVendido: produto.vendas?.reduce((acc: number, venda: any) => acc + venda.total, 0) || 0
+        totalVendido: produto.vendas?.reduce((acc: number, venda: any) => acc + (venda.total || 0), 0) || 0
       })) || []
 
       const produtosMaisLucrativos = produtosComLucro
