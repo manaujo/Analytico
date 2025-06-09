@@ -12,7 +12,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Users,
-  Target
+  Target,
+  Plus
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar } from 'recharts'
 
@@ -303,9 +304,11 @@ export function Dashboard() {
                         Estoque: {produto.quantidade_estoque}
                       </p>
                     </div>
-                    <Button size="sm" variant="outline">
-                      Ver
-                    </Button>
+                    <Link to="/produtos">
+                      <Button size="sm" variant="outline">
+                        Ver
+                      </Button>
+                    </Link>
                   </div>
                 ))
               ) : (
@@ -364,15 +367,15 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <Link to="/produtos/novo">
+              <Link to="/produtos">
                 <Button variant="outline" className="w-full justify-start">
                   <Package className="h-4 w-4 mr-2" />
-                  Adicionar Produto
+                  Gerenciar Produtos
                 </Button>
               </Link>
               <Link to="/vendas/nova">
                 <Button variant="outline" className="w-full justify-start">
-                  <DollarSign className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Registrar Venda
                 </Button>
               </Link>
