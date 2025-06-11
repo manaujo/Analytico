@@ -10,7 +10,9 @@ import {
   Bell,
   Settings,
   Home,
-  Plus
+  Plus,
+  PackageOpen,
+  Activity
 } from 'lucide-react'
 
 const menuItems = [
@@ -18,6 +20,8 @@ const menuItems = [
   { path: '/produtos', label: 'Produtos', icon: Package },
   { path: '/vendas', label: 'Vendas', icon: TrendingUp },
   { path: '/vendas/nova', label: 'Nova Venda', icon: Plus },
+  { path: '/estoque/entradas', label: 'Entrada Estoque', icon: PackageOpen },
+  { path: '/previsoes', label: 'Previsões', icon: Activity },
   { path: '/metas', label: 'Metas', icon: Target },
   { path: '/upload', label: 'Importar Dados', icon: Upload },
   { path: '/relatorios', label: 'Relatórios', icon: FileText },

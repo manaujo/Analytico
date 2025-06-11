@@ -15,6 +15,9 @@ export function LandingPage() {
               <span className="ml-2 text-2xl font-bold text-text">Analytico</span>
             </div>
             <div className="flex items-center space-x-4">
+              <Link to="/pricing" className="text-gray-600 hover:text-gray-800 font-medium">
+                Preços
+              </Link>
               <Link
                 to="/login"
                 className="text-gray-600 hover:text-gray-800 font-medium"
@@ -47,9 +50,11 @@ export function LandingPage() {
                   Começar Agora - Grátis
                 </Button>
               </Link>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                Ver Demo
-              </Button>
+              <Link to="/pricing">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  Ver Preços
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -131,96 +136,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-text mb-4">
-              Planos Simples e Transparentes
-            </h2>
-            <p className="text-xl text-gray-600">
-              Escolha o plano ideal para o seu negócio
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="bg-white p-8 rounded-xl border border-gray-200">
-              <h3 className="text-2xl font-bold text-text mb-4">Plano Mensal</h3>
-              <div className="mb-6">
-                <span className="text-4xl font-bold text-primary">R$ 120</span>
-                <span className="text-gray-600">/mês</span>
-              </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center">
-                  <span className="text-secondary mr-2">✓</span>
-                  Dashboard completo
-                </li>
-                <li className="flex items-center">
-                  <span className="text-secondary mr-2">✓</span>
-                  Múltiplas empresas
-                </li>
-                <li className="flex items-center">
-                  <span className="text-secondary mr-2">✓</span>
-                  Relatórios automáticos
-                </li>
-                <li className="flex items-center">
-                  <span className="text-secondary mr-2">✓</span>
-                  Alertas inteligentes
-                </li>
-                <li className="flex items-center">
-                  <span className="text-secondary mr-2">✓</span>
-                  Suporte por email
-                </li>
-              </ul>
-              <Button className="w-full" size="lg">
-                Escolher Plano Mensal
-              </Button>
-            </div>
-
-            <div className="bg-white p-8 rounded-xl border-2 border-primary relative">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <span className="bg-primary text-white px-4 py-1 rounded-full text-sm font-medium">
-                  15% de desconto
-                </span>
-              </div>
-              <h3 className="text-2xl font-bold text-text mb-4">Plano Anual</h3>
-              <div className="mb-6">
-                <span className="text-4xl font-bold text-primary">R$ 1.224</span>
-                <span className="text-gray-600">/ano</span>
-                <div className="text-sm text-gray-500">
-                  <s>R$ 1.440</s> - Economia de R$ 216
-                </div>
-              </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center">
-                  <span className="text-secondary mr-2">✓</span>
-                  Dashboard completo
-                </li>
-                <li className="flex items-center">
-                  <span className="text-secondary mr-2">✓</span>
-                  Múltiplas empresas
-                </li>
-                <li className="flex items-center">
-                  <span className="text-secondary mr-2">✓</span>
-                  Relatórios automáticos
-                </li>
-                <li className="flex items-center">
-                  <span className="text-secondary mr-2">✓</span>
-                  Alertas inteligentes
-                </li>
-                <li className="flex items-center">
-                  <span className="text-secondary mr-2">✓</span>
-                  Suporte prioritário
-                </li>
-              </ul>
-              <Button className="w-full" size="lg">
-                Escolher Plano Anual
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-20 bg-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -230,11 +145,18 @@ export function LandingPage() {
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
             Junte-se a centenas de empresas que já otimizaram suas operações com o Analytico
           </p>
-          <Link to="/cadastro">
-            <Button variant="secondary" size="lg">
-              Começar Agora - 7 Dias Grátis
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/cadastro">
+              <Button variant="secondary" size="lg">
+                Começar Agora - 7 Dias Grátis
+              </Button>
+            </Link>
+            <Link to="/pricing">
+              <Button variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-primary">
+                Ver Preços
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 

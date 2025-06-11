@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useEmpresa } from '../hooks/useEmpresa'
+import { useSubscription } from '../hooks/useSubscription'
 import { supabase } from '../lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card'
 import { Button } from '../components/UI/Button'
@@ -15,27 +16,19 @@ import {
   Edit,
   LogOut,
   Check,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react'
+import { formatPrice } from '../lib/stripe'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import toast from 'react-hot-toast'
-
-interface AssinaturaStatus {
-  ativa: boolean
-  plano: string | null
-  proxima_cobranca: string | null
-  valor: number | null
-}
 
 export function Configuracoes() {
   const { user, signOut } = useAuth()
   const { empresas, empresaAtual, setEmpresaAtual, criarEmpresa } = useEmpresa()
+  const { subscription, isActive, createPortalSession, isStripeEnabled } = useSubscription()
   const [loading, setLoading] = useState(false)
-  const [assinatura, setAssinatura] = useState<AssinaturaStatus>({
-    ativa: false,
-    plano: null,
-    proxima_cobranca: null,
-    valor: null
-  })
 
   // Estados para edição
   const [editandoEmpresa, setEditandoEmpresa] = useState(false)
@@ -67,30 +60,7 @@ export function Configuracoes() {
         cnpj: empresaAtual.cnpj || ''
       })
     }
-    verificarAssinatura()
   }, [empresaAtual])
-
-  const verificarAssinatura = async () => {
-    if (!user) return
-
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verificar-assinatura`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_id: user.id })
-      })
-
-      const result = await response.json()
-      if (result.success) {
-        setAssinatura(result.assinatura)
-      }
-    } catch (error) {
-      console.error('Erro ao verificar assinatura:', error)
-    }
-  }
 
   const salvarDadosEmpresa = async () => {
     if (!empresaAtual) return
@@ -177,10 +147,26 @@ export function Configuracoes() {
     }
   }
 
-  const redirecionarStripe = () => {
-    // Em uma implementação real, você redirecionaria para o portal do cliente do Stripe
-    toast.info('Redirecionando para o portal de pagamentos...')
-    window.open('https://billing.stripe.com/p/login/test_123', '_blank')
+  const abrirPortalStripe = async () => {
+    if (!subscription) {
+      toast.error('Nenhuma assinatura encontrada')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const result = await createPortalSession()
+      
+      if ('url' in result) {
+        window.open(result.url, '_blank')
+      } else {
+        toast.error(result.error)
+      }
+    } catch (error) {
+      toast.error('Erro ao acessar portal de pagamentos')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const formatarCNPJ = (value: string) => {
@@ -284,47 +270,57 @@ export function Configuracoes() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Status</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  assinatura.ativa 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {assinatura.ativa ? 'Ativa' : 'Inativa'}
-                </span>
+            {!isStripeEnabled ? (
+              <div className="text-center py-4">
+                <p className="text-gray-500 mb-4">Sistema de pagamentos não configurado</p>
+                <p className="text-sm text-gray-400">
+                  Entre em contato para informações sobre assinatura
+                </p>
               </div>
-              
-              {assinatura.ativa && (
-                <>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Plano</label>
-                    <p className="text-text capitalize">{assinatura.plano}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Valor</label>
-                    <p className="text-text">
-                      R$ {assinatura.valor ? (assinatura.valor / 100).toFixed(2) : '0,00'}
-                    </p>
-                  </div>
-                  
-                  {assinatura.proxima_cobranca && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Próxima cobrança</label>
-                      <p className="text-text">
-                        {new Date(assinatura.proxima_cobranca).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-              
-              <Button variant="outline" onClick={redirecionarStripe} size="sm">
-                {assinatura.ativa ? 'Gerenciar Assinatura' : 'Assinar Agora'}
-              </Button>
-            </div>
+            ) : subscription ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">Status</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    isActive 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {isActive ? 'Ativa' : subscription.status}
+                  </span>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Plano</label>
+                  <p className="text-text">{subscription.plan_name}</p>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Próxima cobrança</label>
+                  <p className="text-text">
+                    {format(new Date(subscription.current_period_end), 'dd/MM/yyyy', { locale: ptBR })}
+                  </p>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={abrirPortalStripe} 
+                  loading={loading}
+                  size="sm"
+                  className="flex items-center space-x-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Gerenciar Assinatura</span>
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-gray-500 mb-4">Nenhuma assinatura ativa</p>
+                <Button size="sm">
+                  Assinar Agora
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
