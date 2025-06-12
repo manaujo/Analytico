@@ -1,24 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Lista de domínios permitidos
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://analytioficial.netlify.app"
-];
-
-// Função para montar headers CORS
-function getCorsHeaders(origin: string | null): HeadersInit {
-  return {
-    "Access-Control-Allow-Origin": allowedOrigins.includes(origin ?? "")
-      ? origin!
-      : "",
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Content-Type": "application/json"
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "https://analytioficial.netlify.app", // Ajuste para o seu domínio front-end
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS"
+};
 
 interface UploadData {
   empresa_id: string;
@@ -27,13 +15,11 @@ interface UploadData {
 }
 
 serve(async (req) => {
-  const origin = req.headers.get("origin");
-  const headers = getCorsHeaders(origin);
-
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers
+    // Resposta correta para preflight CORS
+    return new Response("ok", {
+      status: 200,
+      headers: corsHeaders
     });
   }
 
@@ -56,7 +42,6 @@ serve(async (req) => {
       const lines = file_content.split("\n");
       for (let i = 1; i < lines.length; i++) {
         const [produto_nome, quantidade, preco, data] = lines[i].split(",");
-
         if (produto_nome && quantidade && preco) {
           const { data: produto, error: produtoError } = await supabaseClient
             .from("produtos")
@@ -121,8 +106,8 @@ serve(async (req) => {
         vendas_processadas: vendas.length
       }),
       {
-        status: 200,
-        headers
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200
       }
     );
   } catch (error) {
@@ -133,8 +118,8 @@ serve(async (req) => {
         error: error.message
       }),
       {
-        status: 400,
-        headers
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400
       }
     );
   }
