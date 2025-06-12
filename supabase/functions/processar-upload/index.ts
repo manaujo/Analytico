@@ -1,16 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Substitua pelo seu domínio de frontend
-const allowedOrigin = "https://analytioficial.netlify.app";
+// Lista de domínios permitidos
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://analytioficial.netlify.app"
+];
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": allowedOrigin,
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json"
-};
+// Função para montar headers CORS
+function getCorsHeaders(origin: string | null): HeadersInit {
+  return {
+    "Access-Control-Allow-Origin": allowedOrigins.includes(origin ?? "")
+      ? origin!
+      : "",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json"
+  };
+}
 
 interface UploadData {
   empresa_id: string;
@@ -19,11 +27,13 @@ interface UploadData {
 }
 
 serve(async (req) => {
-  // Preflight OPTIONS request
+  const origin = req.headers.get("origin");
+  const headers = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
-      headers: corsHeaders
+      headers
     });
   }
 
@@ -42,11 +52,11 @@ serve(async (req) => {
 
     let vendas: any[] = [];
 
-    // Processar CSV
     if (file_type === "csv") {
       const lines = file_content.split("\n");
       for (let i = 1; i < lines.length; i++) {
         const [produto_nome, quantidade, preco, data] = lines[i].split(",");
+
         if (produto_nome && quantidade && preco) {
           const { data: produto, error: produtoError } = await supabaseClient
             .from("produtos")
@@ -112,7 +122,7 @@ serve(async (req) => {
       }),
       {
         status: 200,
-        headers: corsHeaders
+        headers
       }
     );
   } catch (error) {
@@ -120,11 +130,11 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message ?? "Erro desconhecido"
+        error: error.message
       }),
       {
         status: 400,
-        headers: corsHeaders
+        headers
       }
     );
   }
