@@ -5,13 +5,15 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "https://analytioficial.netlify.app",
   "Access-Control-Allow-Headers":
     "authorization, content-type, apikey, x-client-info",
-  "Access-Control-Allow-Methods": "POST, OPTIONS"
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Credentials": "true"
 };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
+    // Responde à requisição CORS preflight
     return new Response(null, {
-      status: 200,
+      status: 204,
       headers: corsHeaders
     });
   }
@@ -28,7 +30,9 @@ serve(async (req) => {
       throw new Error("Dados obrigatórios não fornecidos");
     }
 
-    // Seu código para processar CSV e inserir vendas aqui...
+    // Aqui você processa o CSV, por exemplo, inserindo vendas no banco.
+    // Exemplo fictício (deve ser substituído pelo seu código real):
+    // await supabase.from("vendas").insert([{ empresa_id, dados: file_content }]);
 
     return new Response(
       JSON.stringify({ success: true, message: "Processado com sucesso" }),
