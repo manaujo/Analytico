@@ -50,6 +50,7 @@ export function ImportarDados() {
   }, [empresaAtual]);
 
   const carregarHistoricoUploads = async () => {
+    console.log(empresaAtual);
     if (!empresaAtual) return;
 
     setLoading(true);
@@ -61,6 +62,7 @@ export function ImportarDados() {
         .order("data_envio", { ascending: false });
 
       if (error) throw error;
+      console.log("Uploads carregados:", data);
       setUploads(data || []);
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
@@ -89,7 +91,7 @@ export function ImportarDados() {
       const fileName = `${empresaAtual!.id}/${uuidv4()}_${file.name}`;
 
       // Upload para Supabase Storage
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data } = await supabase.storage
         .from("uploads") // Nome do bucket
         .upload(fileName, file, {
           contentType: file.type,
@@ -102,31 +104,16 @@ export function ImportarDados() {
         );
       }
 
-      // Chamada para a edge function processar o arquivo
-      const response = await fetch(
-        "https://<your-project>.supabase.co/functions/v1/processar-upload",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `${import.meta.env.VITE_SUPABASE_ANON_KEY}` // se necessário
-          },
-          body: JSON.stringify({ arquivo: "..." })
-        }
-      );
-
-      const result = await response.json();
-
-      if (result.success) {
+      if (!uploadError) {
         setUploadStatus({
           success: true,
-          message: result.message,
-          details: result
+          message: "Arquivo processado com sucesso!",
+          details: uploadError
         });
         toast.success("Arquivo processado com sucesso!");
         carregarHistoricoUploads();
       } else {
-        throw new Error(result.error || "Erro ao processar arquivo");
+        throw new Error(uploadError || "Erro ao processar arquivo");
       }
     } catch (error) {
       console.error("Erro ao processar arquivo:", error);
