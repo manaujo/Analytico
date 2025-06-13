@@ -4,18 +4,22 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://analytioficial.netlify.app",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers":
     "authorization, content-type, apikey, x-client-info"
 };
 
 serve(async (req: Request) => {
-  // Responde ao preflight (OPTIONS)
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
-      headers: corsHeaders
+      headers: {
+        "Access-Control-Allow-Origin": "*", // ou 'http://localhost:5173'
+        "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+        "Content-Length": "0"
+      }
     });
   }
 
@@ -37,12 +41,29 @@ serve(async (req: Request) => {
       );
     }
 
-    // Aqui você processaria o arquivo CSV, por exemplo
+    // Decodifica o base64
+    const base64Data = file_content.split(",").pop(); // remove prefixo tipo data:
+    const buffer = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+
+    // Gera nome único
+    const fileName = `empresa_${empresa_id}_${Date.now()}.csv`;
+
+    // Envia para o Storage (bucket: "uploads")
+    const { data, error } = await supabase.storage
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", empresa_id)
+      .headers({ Accept: "application/json" });
+
+    if (error) {
+      throw new Error("Erro ao enviar para o Storage: " + error.message);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Upload processado com sucesso!"
+        message: "Arquivo enviado com sucesso!",
+        path: data?.path
       }),
       {
         status: 200,
