@@ -36,10 +36,11 @@ serve(async (req) => {
 
     if (file_type === "csv") {
       const lines = file_content.trim().split("\n");
+
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(",");
 
-        if (cols.length < 3) continue; // linha incompleta
+        if (cols.length < 3) continue; // Linha incompleta
 
         const [produto_nome, quantidadeStr, precoStr, dataStr] = cols.map((c) =>
           c.trim()
@@ -52,7 +53,7 @@ serve(async (req) => {
 
         if (isNaN(quantidade) || isNaN(preco)) continue;
 
-        // Busca produto existente
+        // 🔍 Buscar produto existente
         const { data: produto, error: produtoError } = await supabaseClient
           .from("produtos")
           .select("id")
@@ -62,14 +63,13 @@ serve(async (req) => {
           .single();
 
         if (produtoError && produtoError.code !== "PGRST116") {
-          // PGRST116 = no rows found
           throw produtoError;
         }
 
         let produto_id = produto?.id;
 
         if (!produto_id) {
-          // Cria novo produto
+          // ➕ Criar novo produto se não existir
           const { data: novoProduto, error: criarProdutoError } =
             await supabaseClient
               .from("produtos")
@@ -89,7 +89,7 @@ serve(async (req) => {
           produto_id = novoProduto.id;
         }
 
-        // Trata data de venda
+        // 📅 Processar data
         let data_venda = new Date();
         if (dataStr) {
           const d = new Date(dataStr);
@@ -112,14 +112,16 @@ serve(async (req) => {
       throw new Error(`Tipo de arquivo não suportado: ${file_type}`);
     }
 
+    // 💾 Inserir vendas
     if (vendas.length > 0) {
       const { error: vendasError } = await supabaseClient
         .from("vendas")
         .insert(vendas);
+
       if (vendasError) throw vendasError;
     }
 
-    // Registrar upload
+    // 🗒️ Registrar upload
     const { error: uploadError } = await supabaseClient.from("uploads").insert({
       empresa_id,
       tipo_arquivo: file_type,
@@ -133,7 +135,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `${vendas.length} vendas processadas com sucesso`,
+        message: `${vendas.length} vendas processadas com sucesso.`,
         vendas_processadas: vendas.length
       }),
       {
