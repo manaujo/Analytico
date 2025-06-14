@@ -23,84 +23,89 @@ import { ptBR } from "date-fns/locale";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 
-interface UploadHistorico {
+interface Upload {
   id: string;
   tipo_arquivo: string;
   url: string;
   data_envio: string;
+  quantidade_registros: number;
 }
 
-export function ImportarDados() {
-  const { empresaAtual } = useEmpresa();
-  const [uploads, setUploads] = useState<UploadHistorico[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
+interface Props {
+  empresaId: string;
+  supabaseClient: any; // Passe seu cliente Supabase aqui
+}
+
+const UploadVendas: React.FC<Props> = ({ empresaId, supabaseClient }) => {
+  const [historicoUploads, setHistoricoUploads] = useState<Upload[]>([]);
   const [uploadStatus, setUploadStatus] = useState<{
-    success: boolean;
+    success: boolean | null;
     message: string;
-    details?: any;
-  } | null>(null);
+  }>({ success: null, message: "" });
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    if (empresaAtual) {
-      carregarHistoricoUploads();
-    }
-  }, [empresaAtual]);
-
-  const carregarHistoricoUploads = async () => {
-    if (!empresaAtual) return;
-
-    setLoading(true);
+  // Carrega histórico de uploads da empresa
+  async function carregarHistoricoUploads() {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from("uploads")
         .select("*")
-        .eq("empresa_id", empresaAtual.id)
+        .eq("empresa_id", empresaId)
         .order("data_envio", { ascending: false });
 
       if (error) throw error;
-      setUploads(data || []);
-    } catch (error) {
-      console.error("Erro ao carregar histórico:", error);
-      toast.error("Erro ao carregar histórico de uploads");
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const processarArquivo = async (file: File) => {
+      if (data) {
+        setHistoricoUploads(data);
+      }
+    } catch (error: any) {
+      console.error("Erro ao carregar uploads:", error.message);
+      setUploadStatus({ success: false, message: "Erro ao carregar uploads" });
+    }
+  }
+
+  // Carrega histórico ao montar componente e quando empresaId muda
+  useEffect(() => {
+    carregarHistoricoUploads();
+  }, [empresaId]);
+
+  // Processa o arquivo selecionado
+  async function processarArquivo(file: File) {
     setUploading(true);
-    setUploadStatus(null);
+    setUploadStatus({ success: null, message: "Processando arquivo..." });
 
     try {
-      let fileContent = "";
+      let fileContent: string;
       let fileType = "";
 
-      if (file.name.endsWith(".csv")) {
+      if (file.name.toLowerCase().endsWith(".csv")) {
         fileType = "csv";
         fileContent = await file.text();
-      } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-        fileType = "xlsx";
-        const arrayBuffer = await file.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
+      } else if (
+        file.name.toLowerCase().endsWith(".xls") ||
+        file.name.toLowerCase().endsWith(".xlsx")
+      ) {
+        fileType = "csv";
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
         fileContent = XLSX.utils.sheet_to_csv(worksheet);
       } else {
-        throw new Error("Formato de arquivo não suportado. Use CSV ou XLSX.");
+        throw new Error("Tipo de arquivo não suportado. Use CSV ou Excel.");
       }
 
-      // Chamada para Edge Function
+      // Ajuste a URL e a autorização da sua edge function aqui:
       const response = await fetch(
-        "https://aybzimoorwpimtyzuepe.supabase.co/functions/v1/processar-upload",
+        "https://<seu-projeto>.supabase.co/functions/v1/processar-upload",
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`
           },
           body: JSON.stringify({
-            empresa_id: empresaAtual!.id,
+            empresa_id: empresaId,
             file_content: fileContent,
             file_type: fileType
           })
@@ -109,259 +114,83 @@ export function ImportarDados() {
 
       const result = await response.json();
 
-      if (result.success) {
-        setUploadStatus({
-          success: true,
-          message: result.message,
-          details: result
-        });
-        toast.success("Arquivo processado com sucesso!");
-        carregarHistoricoUploads();
-      } else {
-        throw new Error(result.error || "Erro ao processar arquivo");
+      if (!response.ok) {
+        throw new Error(result.error || "Erro desconhecido no upload");
       }
-    } catch (error) {
-      console.error("Erro ao processar arquivo:", error);
+
+      setUploadStatus({
+        success: true,
+        message: result.message || "Upload realizado com sucesso!"
+      });
+
+      // Atualiza histórico após upload
+      carregarHistoricoUploads();
+    } catch (error: any) {
       setUploadStatus({
         success: false,
-        message: error instanceof Error ? error.message : "Erro desconhecido"
+        message: error.message || "Erro ao processar arquivo"
       });
-      toast.error("Erro ao processar arquivo");
     } finally {
       setUploading(false);
     }
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: (acceptedFiles) => {
-      if (acceptedFiles.length > 0) {
-        processarArquivo(acceptedFiles[0]);
-      }
-    },
-    accept: {
-      "text/csv": [".csv"],
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
-        ".xlsx"
-      ],
-      "application/vnd.ms-excel": [".xls"]
-    },
-    maxFiles: 1,
-    disabled: uploading
-  });
-
-  const baixarTemplate = () => {
-    const csvContent =
-      "produto,quantidade,preco,data\nProduto Exemplo,10,25.50,2024-01-15\nOutro Produto,5,15.00,2024-01-16";
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "template-vendas.csv";
-    a.click();
-    window.URL.revokeObjectURL(url);
-    toast.success("Template baixado com sucesso!");
-  };
-
-  if (!empresaAtual) {
-    return (
-      <div className="text-center py-12">
-        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Nenhuma empresa selecionada
-        </h2>
-        <p className="text-gray-600">
-          Selecione uma empresa para importar dados.
-        </p>
-      </div>
-    );
   }
 
+  // Evento ao mudar arquivo input
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files.length > 0) {
+      processarArquivo(e.target.files[0]);
+    }
+  }
+
+  // Template CSV para download
+  const templateCSV = `produto_nome,quantidade,preco,data
+Produto A,10,25.5,2025-06-14
+Produto B,5,15.0,2025-06-13`;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-text">Importar Vendas</h1>
-          <p className="text-gray-600 mt-2">
-            Importe seus dados de vendas via CSV ou Excel
-          </p>
-        </div>
-        <Button
-          onClick={baixarTemplate}
-          variant="outline"
-          className="flex items-center space-x-2"
+    <div>
+      <h2>Upload de Vendas</h2>
+
+      <input
+        type="file"
+        accept=".csv,.xls,.xlsx"
+        onChange={onFileChange}
+        disabled={uploading}
+      />
+
+      {uploadStatus.message && (
+        <p
+          style={{
+            color: uploadStatus.success === true ? "green" : "red",
+            marginTop: 10
+          }}
         >
-          <Download className="h-4 w-4" />
-          <span>Baixar Template</span>
-        </Button>
-      </div>
+          {uploadStatus.message}
+        </p>
+      )}
 
-      {/* Instruções */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Como importar seus dados</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm text-gray-600">
-            <p>1. Prepare seu arquivo CSV ou Excel com as seguintes colunas:</p>
-            <ul className="list-disc list-inside ml-4 space-y-1">
-              <li>
-                <strong>produto:</strong> Nome do produto
-              </li>
-              <li>
-                <strong>quantidade:</strong> Quantidade vendida
-              </li>
-              <li>
-                <strong>preco:</strong> Preço unitário (use ponto como separador
-                decimal)
-              </li>
-              <li>
-                <strong>data:</strong> Data da venda (formato: YYYY-MM-DD)
-              </li>
-            </ul>
-            <p>
-              2. Arraste o arquivo para a área abaixo ou clique para selecionar
-            </p>
-            <p>3. Aguarde o processamento e verifique os resultados</p>
-          </div>
-        </CardContent>
-      </Card>
+      <a
+        href={`data:text/csv;charset=utf-8,${encodeURIComponent(templateCSV)}`}
+        download="template_vendas.csv"
+        style={{ display: "inline-block", marginTop: 10 }}
+      >
+        Baixar template CSV
+      </a>
 
-      {/* Área de Upload */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Upload className="h-5 w-5" />
-            <span>Upload de Arquivo</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragActive
-                ? "border-primary bg-primary-light"
-                : uploading
-                ? "border-gray-300 bg-gray-50 cursor-not-allowed"
-                : "border-gray-300 hover:border-primary hover:bg-gray-50"
-            }`}
-          >
-            <input {...getInputProps()} />
-            {uploading ? (
-              <div className="space-y-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="text-gray-600">Processando arquivo...</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Upload className="h-12 w-12 text-gray-400 mx-auto" />
-                {isDragActive ? (
-                  <p className="text-primary font-medium">
-                    Solte o arquivo aqui...
-                  </p>
-                ) : (
-                  <div>
-                    <p className="text-gray-600 mb-2">
-                      Arraste um arquivo CSV ou Excel aqui, ou clique para
-                      selecionar
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Formatos aceitos: .csv, .xlsx, .xls (máximo 1 arquivo)
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+      <h3>Histórico de Uploads</h3>
+      {historicoUploads.length === 0 && <p>Nenhum upload encontrado.</p>}
 
-          {/* Status do Upload */}
-          {uploadStatus && (
-            <div
-              className={`mt-4 p-4 rounded-lg ${
-                uploadStatus.success
-                  ? "bg-green-50 border border-green-200"
-                  : "bg-red-50 border border-red-200"
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                {uploadStatus.success ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-red-600" />
-                )}
-                <p
-                  className={`font-medium ${
-                    uploadStatus.success ? "text-green-800" : "text-red-800"
-                  }`}
-                >
-                  {uploadStatus.message}
-                </p>
-              </div>
-              {uploadStatus.success && uploadStatus.details && (
-                <p className="text-sm text-green-700 mt-2">
-                  {uploadStatus.details.vendas_processadas} vendas foram
-                  importadas com sucesso.
-                </p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Histórico de Uploads */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <FileText className="h-5 w-5" />
-            <span>Histórico de Uploads</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : uploads.length === 0 ? (
-            <div className="text-center py-8">
-              <File className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Nenhum arquivo enviado ainda</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {uploads.map((upload) => (
-                <div
-                  key={upload.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-primary-light p-2 rounded-lg">
-                      <FileText className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-text">{upload.url}</p>
-                      <p className="text-sm text-gray-600">
-                        Tipo: {upload.tipo_arquivo.toUpperCase()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {format(
-                          new Date(upload.data_envio),
-                          "dd/MM/yyyy HH:mm",
-                          { locale: ptBR }
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <ul>
+        {historicoUploads.map((upload) => (
+          <li key={upload.id}>
+            {upload.tipo_arquivo.toUpperCase()} - {upload.url} -{" "}
+            {new Date(upload.data_envio).toLocaleString()} - Registros:{" "}
+            {upload.quantidade_registros}
+          </li>
+        ))}
+      </ul>
     </div>
   );
-}
+};
+
+export default UploadVendas;
