@@ -1,156 +1,166 @@
-import React, { useState, useEffect } from 'react'
-import { useEmpresa } from '../hooks/useEmpresa'
-import { supabase } from '../lib/supabase'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card'
-import { Button } from '../components/UI/Button'
-import { 
-  Upload, 
-  FileText, 
-  CheckCircle, 
+import React, { useState, useEffect } from "react";
+import { useEmpresa } from "../hooks/useEmpresa";
+import { supabase } from "../lib/supabase";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "../components/UI/Card";
+import { Button } from "../components/UI/Button";
+import {
+  Upload,
+  FileText,
+  CheckCircle,
   AlertCircle,
   Download,
   Calendar,
   File
-} from 'lucide-react'
-import { useDropzone } from 'react-dropzone'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
-import toast from 'react-hot-toast'
-import * as XLSX from 'xlsx'
-import Papa from 'papaparse'
+} from "lucide-react";
+import { useDropzone } from "react-dropzone";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
 
 interface UploadHistorico {
-  id: string
-  tipo_arquivo: string
-  url: string
-  data_envio: string
+  id: string;
+  tipo_arquivo: string;
+  url: string;
+  data_envio: string;
 }
 
 export function ImportarDados() {
-  const { empresaAtual } = useEmpresa()
-  const [uploads, setUploads] = useState<UploadHistorico[]>([])
-  const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(false)
+  const { empresaAtual } = useEmpresa();
+  const [uploads, setUploads] = useState<UploadHistorico[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{
-    success: boolean
-    message: string
-    details?: any
-  } | null>(null)
+    success: boolean;
+    message: string;
+    details?: any;
+  } | null>(null);
 
   useEffect(() => {
     if (empresaAtual) {
-      carregarHistoricoUploads()
+      carregarHistoricoUploads();
     }
-  }, [empresaAtual])
+  }, [empresaAtual]);
 
   const carregarHistoricoUploads = async () => {
-    if (!empresaAtual) return
+    if (!empresaAtual) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('uploads')
-        .select('*')
-        .eq('empresa_id', empresaAtual.id)
-        .order('data_envio', { ascending: false })
+        .from("uploads")
+        .select("*")
+        .eq("empresa_id", empresaAtual.id)
+        .order("data_envio", { ascending: false });
 
-      if (error) throw error
-      setUploads(data || [])
+      if (error) throw error;
+      setUploads(data || []);
     } catch (error) {
-      console.error('Erro ao carregar histórico:', error)
-      toast.error('Erro ao carregar histórico de uploads')
+      console.error("Erro ao carregar histórico:", error);
+      toast.error("Erro ao carregar histórico de uploads");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const processarArquivo = async (file: File) => {
-    setUploading(true)
-    setUploadStatus(null)
+    setUploading(true);
+    setUploadStatus(null);
 
     try {
-      let fileContent = ''
-      let fileType = ''
+      let fileContent = "";
+      let fileType = "";
 
-      if (file.name.endsWith('.csv')) {
-        fileType = 'csv'
-        fileContent = await file.text()
-      } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-        fileType = 'xlsx'
-        const arrayBuffer = await file.arrayBuffer()
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' })
-        const sheetName = workbook.SheetNames[0]
-        const worksheet = workbook.Sheets[sheetName]
-        fileContent = XLSX.utils.sheet_to_csv(worksheet)
+      if (file.name.endsWith(".csv")) {
+        fileType = "csv";
+        fileContent = await file.text();
+      } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+        fileType = "xlsx";
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        fileContent = XLSX.utils.sheet_to_csv(worksheet);
       } else {
-        throw new Error('Formato de arquivo não suportado. Use CSV ou XLSX.')
+        throw new Error("Formato de arquivo não suportado. Use CSV ou XLSX.");
       }
 
-      // Chamar edge function para processar - URL corrigida
-      const response = await fetch(`https://aybzimoorwpimtyzuepe.supabase.co/functions/v1/processar-upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          empresa_id: empresaAtual!.id,
-          file_content: fileContent,
-          file_type: fileType
-        })
-      })
+      // Chamada para Edge Function
+      const response = await fetch(
+        "https://aybzimoorwpimtyzuepe.supabase.co/functions/v1/processar-upload",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            empresa_id: empresaAtual!.id,
+            file_content: fileContent,
+            file_type: fileType
+          })
+        }
+      );
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.success) {
         setUploadStatus({
           success: true,
           message: result.message,
           details: result
-        })
-        toast.success('Arquivo processado com sucesso!')
-        carregarHistoricoUploads()
+        });
+        toast.success("Arquivo processado com sucesso!");
+        carregarHistoricoUploads();
       } else {
-        throw new Error(result.error || 'Erro ao processar arquivo')
+        throw new Error(result.error || "Erro ao processar arquivo");
       }
     } catch (error) {
-      console.error('Erro ao processar arquivo:', error)
+      console.error("Erro ao processar arquivo:", error);
       setUploadStatus({
         success: false,
-        message: error instanceof Error ? error.message : 'Erro desconhecido'
-      })
-      toast.error('Erro ao processar arquivo')
+        message: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+      toast.error("Erro ao processar arquivo");
     } finally {
-      setUploading(false)
+      setUploading(false);
     }
-  }
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
-        processarArquivo(acceptedFiles[0])
+        processarArquivo(acceptedFiles[0]);
       }
     },
     accept: {
-      'text/csv': ['.csv'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'application/vnd.ms-excel': ['.xls']
+      "text/csv": [".csv"],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+        ".xlsx"
+      ],
+      "application/vnd.ms-excel": [".xls"]
     },
     maxFiles: 1,
     disabled: uploading
-  })
+  });
 
   const baixarTemplate = () => {
-    const csvContent = 'produto,quantidade,preco,data\nProduto Exemplo,10,25.50,2024-01-15\nOutro Produto,5,15.00,2024-01-16'
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'template-vendas.csv'
-    a.click()
-    window.URL.revokeObjectURL(url)
-    toast.success('Template baixado com sucesso!')
-  }
+    const csvContent =
+      "produto,quantidade,preco,data\nProduto Exemplo,10,25.50,2024-01-15\nOutro Produto,5,15.00,2024-01-16";
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "template-vendas.csv";
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success("Template baixado com sucesso!");
+  };
 
   if (!empresaAtual) {
     return (
@@ -163,7 +173,7 @@ export function ImportarDados() {
           Selecione uma empresa para importar dados.
         </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -176,7 +186,11 @@ export function ImportarDados() {
             Importe seus dados de vendas via CSV ou Excel
           </p>
         </div>
-        <Button onClick={baixarTemplate} variant="outline" className="flex items-center space-x-2">
+        <Button
+          onClick={baixarTemplate}
+          variant="outline"
+          className="flex items-center space-x-2"
+        >
           <Download className="h-4 w-4" />
           <span>Baixar Template</span>
         </Button>
@@ -191,12 +205,23 @@ export function ImportarDados() {
           <div className="space-y-3 text-sm text-gray-600">
             <p>1. Prepare seu arquivo CSV ou Excel com as seguintes colunas:</p>
             <ul className="list-disc list-inside ml-4 space-y-1">
-              <li><strong>produto:</strong> Nome do produto</li>
-              <li><strong>quantidade:</strong> Quantidade vendida</li>
-              <li><strong>preco:</strong> Preço unitário (use ponto como separador decimal)</li>
-              <li><strong>data:</strong> Data da venda (formato: YYYY-MM-DD)</li>
+              <li>
+                <strong>produto:</strong> Nome do produto
+              </li>
+              <li>
+                <strong>quantidade:</strong> Quantidade vendida
+              </li>
+              <li>
+                <strong>preco:</strong> Preço unitário (use ponto como separador
+                decimal)
+              </li>
+              <li>
+                <strong>data:</strong> Data da venda (formato: YYYY-MM-DD)
+              </li>
             </ul>
-            <p>2. Arraste o arquivo para a área abaixo ou clique para selecionar</p>
+            <p>
+              2. Arraste o arquivo para a área abaixo ou clique para selecionar
+            </p>
             <p>3. Aguarde o processamento e verifique os resultados</p>
           </div>
         </CardContent>
@@ -214,15 +239,14 @@ export function ImportarDados() {
           <div
             {...getRootProps()}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragActive 
-                ? 'border-primary bg-primary-light' 
-                : uploading 
-                ? 'border-gray-300 bg-gray-50 cursor-not-allowed' 
-                : 'border-gray-300 hover:border-primary hover:bg-gray-50'
+              isDragActive
+                ? "border-primary bg-primary-light"
+                : uploading
+                ? "border-gray-300 bg-gray-50 cursor-not-allowed"
+                : "border-gray-300 hover:border-primary hover:bg-gray-50"
             }`}
           >
             <input {...getInputProps()} />
-            
             {uploading ? (
               <div className="space-y-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -232,11 +256,14 @@ export function ImportarDados() {
               <div className="space-y-4">
                 <Upload className="h-12 w-12 text-gray-400 mx-auto" />
                 {isDragActive ? (
-                  <p className="text-primary font-medium">Solte o arquivo aqui...</p>
+                  <p className="text-primary font-medium">
+                    Solte o arquivo aqui...
+                  </p>
                 ) : (
                   <div>
                     <p className="text-gray-600 mb-2">
-                      Arraste um arquivo CSV ou Excel aqui, ou clique para selecionar
+                      Arraste um arquivo CSV ou Excel aqui, ou clique para
+                      selecionar
                     </p>
                     <p className="text-sm text-gray-500">
                       Formatos aceitos: .csv, .xlsx, .xls (máximo 1 arquivo)
@@ -249,24 +276,31 @@ export function ImportarDados() {
 
           {/* Status do Upload */}
           {uploadStatus && (
-            <div className={`mt-4 p-4 rounded-lg ${
-              uploadStatus.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-            }`}>
+            <div
+              className={`mt-4 p-4 rounded-lg ${
+                uploadStatus.success
+                  ? "bg-green-50 border border-green-200"
+                  : "bg-red-50 border border-red-200"
+              }`}
+            >
               <div className="flex items-center space-x-2">
                 {uploadStatus.success ? (
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 ) : (
                   <AlertCircle className="h-5 w-5 text-red-600" />
                 )}
-                <p className={`font-medium ${
-                  uploadStatus.success ? 'text-green-800' : 'text-red-800'
-                }`}>
+                <p
+                  className={`font-medium ${
+                    uploadStatus.success ? "text-green-800" : "text-red-800"
+                  }`}
+                >
                   {uploadStatus.message}
                 </p>
               </div>
               {uploadStatus.success && uploadStatus.details && (
                 <p className="text-sm text-green-700 mt-2">
-                  {uploadStatus.details.vendas_processadas} vendas foram importadas com sucesso.
+                  {uploadStatus.details.vendas_processadas} vendas foram
+                  importadas com sucesso.
                 </p>
               )}
             </div>
@@ -295,7 +329,10 @@ export function ImportarDados() {
           ) : (
             <div className="space-y-3">
               {uploads.map((upload) => (
-                <div key={upload.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div
+                  key={upload.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                >
                   <div className="flex items-center space-x-3">
                     <div className="bg-primary-light p-2 rounded-lg">
                       <FileText className="h-4 w-4 text-primary" />
@@ -311,7 +348,11 @@ export function ImportarDados() {
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <Calendar className="h-4 w-4" />
                       <span>
-                        {format(new Date(upload.data_envio), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                        {format(
+                          new Date(upload.data_envio),
+                          "dd/MM/yyyy HH:mm",
+                          { locale: ptBR }
+                        )}
                       </span>
                     </div>
                   </div>
@@ -322,5 +363,5 @@ export function ImportarDados() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
