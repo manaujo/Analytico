@@ -1,9 +1,9 @@
-import React, { ReactNode } from 'react'
-import { Header } from './Header'
-import { Sidebar } from './Sidebar'
+import React, { ReactNode } from "react";
+import { Header } from "./Header";
+import { Sidebar } from "./Sidebar";
 
 interface AppLayoutProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -13,11 +13,9 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="flex h-[calc(100vh-73px)]">
         <Sidebar />
         <main className="flex-1 overflow-auto">
-          <div className="p-6">
-            {children}
-          </div>
+          <div className="p-6">{children}</div>
         </main>
       </div>
     </div>
-  )
+  );
 }

@@ -1,81 +1,87 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from './useAuth'
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect
+} from "react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "./useAuth";
 
 interface Empresa {
-  id: string
-  nome: string
-  cnpj: string
-  created_at: string
+  id: string;
+  nome: string;
+  cnpj: string;
+  created_at: string;
 }
 
 interface EmpresaContextType {
-  empresas: Empresa[]
-  empresaAtual: Empresa | null
-  setEmpresaAtual: (empresa: Empresa | null) => void
-  carregarEmpresas: () => Promise<void>
-  criarEmpresa: (nome: string, cnpj: string) => Promise<{ error: any }>
-  loading: boolean
+  empresas: Empresa[];
+  empresaAtual: Empresa | null;
+  setEmpresaAtual: (empresa: Empresa | null) => void;
+  carregarEmpresas: () => Promise<void>;
+  criarEmpresa: (nome: string, cnpj: string) => Promise<{ error: any }>;
+  loading: boolean;
 }
 
-const EmpresaContext = createContext<EmpresaContextType | undefined>(undefined)
+const EmpresaContext = createContext<EmpresaContextType | undefined>(undefined);
 
 export function EmpresaProvider({ children }: { children: ReactNode }) {
-  const [empresas, setEmpresas] = useState<Empresa[]>([])
-  const [empresaAtual, setEmpresaAtual] = useState<Empresa | null>(null)
-  const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [empresaAtual, setEmpresaAtual] = useState<Empresa | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   const carregarEmpresas = async () => {
-    if (!user) return
+    if (!user) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .from("empresas")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (!error && data) {
-        setEmpresas(data)
+        setEmpresas(data);
         if (data.length > 0 && !empresaAtual) {
-          setEmpresaAtual(data[0])
+          setEmpresaAtual(data[0]);
         }
       }
     } catch (error) {
-      console.error('Erro ao carregar empresas:', error)
+      console.error("Erro ao carregar empresas:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const criarEmpresa = async (nome: string, cnpj: string) => {
-    if (!user) return { error: 'Usuário não autenticado' }
+    if (!user) return { error: "Usuário não autenticado" };
 
     const { data, error } = await supabase
-      .from('empresas')
+      .from("empresas")
       .insert({
         user_id: user.id,
         nome,
-        cnpj,
+        cnpj
       })
       .select()
-      .single()
+      .single();
 
     if (!error && data) {
-      setEmpresas(prev => [data, ...prev])
-      setEmpresaAtual(data)
+      setEmpresas((prev) => [data, ...prev]);
+      setEmpresaAtual(data);
     }
 
-    return { error }
-  }
+    return { error };
+  };
 
   useEffect(() => {
     if (user) {
-      carregarEmpresas()
+      carregarEmpresas();
     }
-  }, [user])
+  }, [user]);
 
   const value = {
     empresas,
@@ -83,20 +89,18 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
     setEmpresaAtual,
     carregarEmpresas,
     criarEmpresa,
-    loading,
-  }
+    loading
+  };
 
   return (
-    <EmpresaContext.Provider value={value}>
-      {children}
-    </EmpresaContext.Provider>
-  )
+    <EmpresaContext.Provider value={value}>{children}</EmpresaContext.Provider>
+  );
 }
 
 export function useEmpresa() {
-  const context = useContext(EmpresaContext)
+  const context = useContext(EmpresaContext);
   if (context === undefined) {
-    throw new Error('useEmpresa must be used within an EmpresaProvider')
+    throw new Error("useEmpresa must be used within an EmpresaProvider");
   }
-  return context
+  return context;
 }

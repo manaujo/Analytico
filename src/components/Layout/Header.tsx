@@ -1,15 +1,15 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
-import { useEmpresa } from '../../hooks/useEmpresa'
-import { LogOut, Building2, ChevronDown, Plus } from 'lucide-react'
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import { useEmpresa } from "../../hooks/useEmpresa";
+import { LogOut, Building2, ChevronDown, Plus } from "lucide-react";
 
 export function Header() {
-  const { user, signOut } = useAuth()
-  const { empresas, empresaAtual, setEmpresaAtual } = useEmpresa()
-  const [showEmpresaDropdown, setShowEmpresaDropdown] = useState(false)
+  const { user, signOut } = useAuth();
+  const { empresas, empresaAtual, setEmpresaAtual } = useEmpresa();
+  const [showEmpresaDropdown, setShowEmpresaDropdown] = useState(false);
 
-  if (!user) return null
+  if (!user) return null;
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -18,7 +18,7 @@ export function Header() {
           <Link to="/dashboard" className="text-2xl font-bold text-primary">
             Analytico
           </Link>
-          
+
           {empresaAtual && (
             <div className="relative">
               <button
@@ -37,15 +37,19 @@ export function Header() {
                       <button
                         key={empresa.id}
                         onClick={() => {
-                          setEmpresaAtual(empresa)
-                          setShowEmpresaDropdown(false)
+                          setEmpresaAtual(empresa);
+                          setShowEmpresaDropdown(false);
                         }}
                         className={`w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 transition-colors ${
-                          empresa.id === empresaAtual?.id ? 'bg-primary-light text-primary' : ''
+                          empresa.id === empresaAtual?.id
+                            ? "bg-primary-light text-primary"
+                            : ""
                         }`}
                       >
                         <div className="font-medium">{empresa.nome}</div>
-                        <div className="text-xs text-gray-500">{empresa.cnpj}</div>
+                        <div className="text-xs text-gray-500">
+                          {empresa.cnpj}
+                        </div>
                       </button>
                     ))}
                     <hr className="my-2" />
@@ -65,9 +69,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-600">
-            {user.email}
-          </span>
+          <span className="text-sm text-gray-600">{user.email}</span>
           <button
             onClick={signOut}
             className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-800 transition-colors"
@@ -78,5 +80,5 @@ export function Header() {
         </div>
       </div>
     </header>
-  )
+  );
 }
