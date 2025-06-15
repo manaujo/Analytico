@@ -89,7 +89,7 @@ export function Previsoes() {
 
     setGerandoPrevisoes(true)
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/previsao-vendas`, {
+      const response = await fetch(`https://aybzimoorwpimtyzuepe.supabase.co/functions/v1/previsao-vendas`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,

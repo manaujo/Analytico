@@ -10,7 +10,7 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
@@ -37,7 +37,10 @@ serve(async (req) => {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
     } catch (err) {
       console.error('Webhook signature verification failed:', err)
-      return new Response('Webhook signature verification failed', { status: 400 })
+      return new Response('Webhook signature verification failed', { 
+        status: 400,
+        headers: corsHeaders 
+      })
     }
 
     console.log('Processing webhook event:', event.type)

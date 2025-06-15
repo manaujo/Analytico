@@ -73,7 +73,7 @@ export function Relatorios() {
 
     setGerandoRelatorio(true)
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-relatorio`, {
+      const response = await fetch(`https://aybzimoorwpimtyzuepe.supabase.co/functions/v1/gerar-relatorio`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
