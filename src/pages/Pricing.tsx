@@ -15,7 +15,7 @@ import {
   ArrowLeft,
   AlertCircle
 } from 'lucide-react'
-import { STRIPE_PLANS, formatPrice } from '../lib/stripe'
+import { STRIPE_PRODUCTS, formatPrice } from '../stripe-config'
 import toast from 'react-hot-toast'
 
 export function Pricing() {
@@ -37,7 +37,7 @@ export function Pricing() {
     }
   }, [canceled, success])
 
-  const handleSubscribe = async (planId: string) => {
+  const handleSubscribe = async (productKey: string) => {
     if (!user) {
       navigate('/login')
       return
@@ -53,9 +53,15 @@ export function Pricing() {
       return
     }
 
-    setLoading(planId)
+    const product = STRIPE_PRODUCTS[productKey as keyof typeof STRIPE_PRODUCTS]
+    if (!product) {
+      toast.error('Produto não encontrado')
+      return
+    }
+
+    setLoading(productKey)
     try {
-      const result = await createCheckoutSession(planId)
+      const result = await createCheckoutSession(product.priceId, product.mode)
       
       if ('url' in result) {
         window.location.href = result.url
@@ -155,65 +161,26 @@ export function Pricing() {
       {/* Pricing Cards */}
       <section className="py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Plano Mensal */}
-            <Card className="relative">
-              <CardHeader className="text-center pb-8">
-                <CardTitle className="text-2xl font-bold text-text mb-4">
-                  {STRIPE_PLANS.monthly.name}
-                </CardTitle>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold text-primary">
-                    {formatPrice(STRIPE_PLANS.monthly.price)}
-                  </span>
-                  <span className="text-gray-600">/mês</span>
-                </div>
-                <p className="text-gray-600">{STRIPE_PLANS.monthly.description}</p>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-8">
-                  {features.map((feature, index) => (
-                    <li key={index} className="flex items-center">
-                      <Check className="h-5 w-5 text-secondary mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button 
-                  className="w-full" 
-                  size="lg"
-                  onClick={() => handleSubscribe('monthly')}
-                  loading={loading === 'monthly'}
-                  disabled={isActive || !isStripeEnabled}
-                >
-                  <CreditCard className="h-5 w-5 mr-2" />
-                  {isActive ? 'Plano Ativo' : !isStripeEnabled ? 'Em Breve' : 'Assinar Plano Mensal'}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Plano Anual */}
+          <div className="grid md:grid-cols-1 gap-8 max-w-2xl mx-auto">
+            {/* Plano Analytico */}
             <Card className="relative border-2 border-primary">
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <div className="bg-primary text-white px-4 py-1 rounded-full text-sm font-medium flex items-center">
                   <Star className="h-4 w-4 mr-1" />
-                  Mais Popular
+                  Recomendado
                 </div>
               </div>
               <CardHeader className="text-center pb-8 pt-8">
                 <CardTitle className="text-2xl font-bold text-text mb-4">
-                  {STRIPE_PLANS.yearly.name}
+                  {STRIPE_PRODUCTS['plano-analytico'].name}
                 </CardTitle>
                 <div className="mb-4">
                   <span className="text-4xl font-bold text-primary">
-                    {formatPrice(STRIPE_PLANS.yearly.price)}
+                    {formatPrice(STRIPE_PRODUCTS['plano-analytico'].price)}
                   </span>
-                  <span className="text-gray-600">/ano</span>
-                  <div className="text-sm text-green-600 font-medium mt-1">
-                    Economia de {formatPrice(STRIPE_PLANS.monthly.price * 12 - STRIPE_PLANS.yearly.price)} por ano
-                  </div>
+                  <span className="text-gray-600">/mês</span>
                 </div>
-                <p className="text-gray-600">{STRIPE_PLANS.yearly.description}</p>
+                <p className="text-gray-600">{STRIPE_PRODUCTS['plano-analytico'].description}</p>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3 mb-8">
@@ -223,20 +190,16 @@ export function Pricing() {
                       <span className="text-gray-700">{feature}</span>
                     </li>
                   ))}
-                  <li className="flex items-center">
-                    <Star className="h-5 w-5 text-yellow-500 mr-3 flex-shrink-0" />
-                    <span className="text-gray-700 font-medium">Suporte prioritário</span>
-                  </li>
                 </ul>
                 <Button 
                   className="w-full" 
                   size="lg"
-                  onClick={() => handleSubscribe('yearly')}
-                  loading={loading === 'yearly'}
+                  onClick={() => handleSubscribe('plano-analytico')}
+                  loading={loading === 'plano-analytico'}
                   disabled={isActive || !isStripeEnabled}
                 >
                   <CreditCard className="h-5 w-5 mr-2" />
-                  {isActive ? 'Plano Ativo' : !isStripeEnabled ? 'Em Breve' : 'Assinar Plano Anual'}
+                  {isActive ? 'Plano Ativo' : !isStripeEnabled ? 'Em Breve' : 'Assinar Agora'}
                 </Button>
               </CardContent>
             </Card>

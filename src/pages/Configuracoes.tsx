@@ -19,7 +19,7 @@ import {
   X,
   ExternalLink
 } from 'lucide-react'
-import { formatPrice } from '../lib/stripe'
+import { formatPrice } from '../stripe-config'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import toast from 'react-hot-toast'
@@ -27,7 +27,7 @@ import toast from 'react-hot-toast'
 export function Configuracoes() {
   const { user, signOut } = useAuth()
   const { empresas, empresaAtual, setEmpresaAtual, criarEmpresa } = useEmpresa()
-  const { subscription, isActive, createPortalSession, isStripeEnabled } = useSubscription()
+  const { subscription, isActive, isStripeEnabled } = useSubscription()
   const [loading, setLoading] = useState(false)
 
   // Estados para edição
@@ -142,28 +142,6 @@ export function Configuracoes() {
     } catch (error) {
       console.error('Erro ao alterar senha:', error)
       toast.error('Erro ao alterar senha')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const abrirPortalStripe = async () => {
-    if (!subscription) {
-      toast.error('Nenhuma assinatura encontrada')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const result = await createPortalSession()
-      
-      if ('url' in result) {
-        window.open(result.url, '_blank')
-      } else {
-        toast.error(result.error)
-      }
-    } catch (error) {
-      toast.error('Erro ao acessar portal de pagamentos')
     } finally {
       setLoading(false)
     }
@@ -286,32 +264,27 @@ export function Configuracoes() {
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-red-100 text-red-800'
                   }`}>
-                    {isActive ? 'Ativa' : subscription.status}
+                    {isActive ? 'Ativa' : subscription.subscription_status}
                   </span>
                 </div>
                 
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Plano</label>
-                  <p className="text-text">{subscription.plan_name}</p>
-                </div>
+                {subscription.current_period_end && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Próxima cobrança</label>
+                    <p className="text-text">
+                      {format(new Date(subscription.current_period_end * 1000), 'dd/MM/yyyy', { locale: ptBR })}
+                    </p>
+                  </div>
+                )}
                 
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Próxima cobrança</label>
-                  <p className="text-text">
-                    {format(new Date(subscription.current_period_end), 'dd/MM/yyyy', { locale: ptBR })}
-                  </p>
-                </div>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={abrirPortalStripe} 
-                  loading={loading}
-                  size="sm"
-                  className="flex items-center space-x-2"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Gerenciar Assinatura</span>
-                </Button>
+                {subscription.payment_method_brand && subscription.payment_method_last4 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Método de pagamento</label>
+                    <p className="text-text">
+                      {subscription.payment_method_brand.toUpperCase()} •••• {subscription.payment_method_last4}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-4">
